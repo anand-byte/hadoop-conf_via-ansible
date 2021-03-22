@@ -1,0 +1,67 @@
+- hosts: all
+  tasks:
+  - name: "copying jdk in NameNode and DataNode"
+    copy:
+        src: "/root/jdk-8u171-linux-x64.rpm"
+        dest: "/root/jdk-8u171-linux-x64.rpm"
+  - name: "copying hadoop in NameNode and DataNode"
+    copy:
+        src: "/root/hadoop-1.2.1-1.x86_64.rpm"
+        dest: "/root/hadoop-1.2.1-1.x86_64.rpm"
+  - name: "Installing jdk"
+    command: "rpm -ivh jdk-8u171-linux-x64.rpm"
+    ignore_errors: yes
+  - name: "Installing hadoop"
+    command: "rpm -ivh hadoop-1.2.1-1.x86_64.rpm --force"
+    ignore_errors: yes
+
+- hosts: "NameNode"
+  tasks:
+  - name: "Creating a directory in NN"
+    file:
+            name: "/nn"
+            state: directory
+    ignore_errors: yes
+  - name: "Copying hdfs-site.xml"
+    copy:
+            src: "hdfs-site.xml"
+            dest: "/etc/hadoop/hdfs-site.xml"
+
+  - name: "copying core-site.xml"
+    copy:
+            src: "core-site.xml"
+            dest: "/etc/hadoop/core-site.xml"
+
+  - name: "Formating NN"
+    shell: "hadoop namenode -format -force"
+
+  - name: "Starting NN"
+    shell: "hadoop-daemon.sh start namenode"
+
+- hosts: "DataNode"
+  tasks:
+  - name: "creating a file"
+    file:
+            name: "/dn"
+            state: directory
+    register: dn_dir
+
+  - name: "configuring hdfs-site.xml"
+    copy:
+            src: "hdfs-site_dn.xml"
+            dest: "/etc/hadoop/hdfs-site.xml"
+
+  - name: "configuring core-site.xml"
+    copy:
+            src: "core-site_dn.xml"
+            dest: "/etc/hadoop/core-site.xml"
+
+  - name: "setting up firewall rule"
+    firewalld:
+            port: "9001/tcp"
+            state: enabled
+            immediate: yes
+            permanent: yes
+
+  - name: "starting datanode"
+    shell: "hadoop-daemon.sh start datanode"
